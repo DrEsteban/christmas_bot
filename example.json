@@ -1,0 +1,47 @@
+{
+    "participants": [
+        {
+            "name": "Fake 1",
+            "email": "1@outlook.com",
+            "imageUrl": "https://bing.com/1"
+        },
+        {
+            "name": "Fake 2",
+            "email": "2@outlook.com",
+            "imageUrl": "https://bing.com/2"
+        },
+        {
+            "name": "Fake 3",
+            "email": "3@outlook.com",
+            "imageUrl": "https://bing.com/3"
+        },
+        {
+            "name": "Fake 4",
+            "email": "4@outlook.com",
+            "imageUrl": "https://bing.com/4"
+        },
+        {
+            "name": "Fake 5",
+            "email": "5@outlook.com",
+            "imageUrl": "https://bing.com/5"
+        },
+        {
+            "name": "Fake 6",
+            "email": "6@outlook.com",
+            "imageUrl": "https://bing.com/6"
+        }
+    ],
+    "preMatches": [
+        {
+            "from": "3@outlook.com",
+            "to": "2@outlook.com"
+        },
+        {
+            "from": "1@outlook.com",
+            "to": "4@outlook.com"
+        }
+    ],
+    "badMatchGroups": [
+        [ "5@outlook.com", "6@outlook.com" ]
+    ]
+}
