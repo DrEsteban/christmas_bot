@@ -9,7 +9,7 @@ namespace christmas_bot
 {
     internal class Program
     {
-        private static IList<(Participant from, Participant to)> _matches = new List<(Participant, Participant)>();
+        private static IList<Match> _matches = new List<Match>();
         private static ParticipantList _participants;
         private static Settings _settings;
 
@@ -33,12 +33,12 @@ namespace christmas_bot
                 {
                     var candidates = GetCandidatesForParticipant(from);
                     var to = candidates[r.Next(0, candidates.Count)];  // Choose a receiver at random
-                    _matches.Add((from, to));
+                    _matches.Add(new Match(from, to));
                 }
 
                 Debug.Assert(_matches.Count == _participants.Count);
 
-                // Send mail results
+                // TODO Send mail results
                 Console.WriteLine(JsonSerializer.Serialize(_matches, new JsonSerializerOptions() { WriteIndented = true }));
             }
             catch (Exception e)
@@ -58,9 +58,9 @@ namespace christmas_bot
             {
                 foreach (var match in _settings.PreMatches)
                 {
-                    var from = _participants.GetParticipantByEmail(match.fromEmail);
-                    var to = _participants.GetParticipantByEmail(match.toEmail);
-                    _matches.Add((from, to));
+                    var from = _participants.GetParticipantByEmail(match.From);
+                    var to = _participants.GetParticipantByEmail(match.To);
+                    _matches.Add(new Match(from, to));
                     result.Add(from);
                 }
             }
@@ -73,7 +73,7 @@ namespace christmas_bot
             var candidates = new List<Participant>(_participants);
             candidates.Remove(from);
 
-            var alreadyReceiving = _matches.Select(m => m.to).ToArray();
+            var alreadyReceiving = _matches.Select(m => m.To).ToArray();
             foreach (var p in _participants.Where(p => alreadyReceiving.Contains(p)))
             {
                 candidates.Remove(p);

@@ -26,10 +26,10 @@ namespace christmas_bot.Models
         public ParticipantList Participants { get; set; }
 
         [JsonPropertyName("preMatches")]
-        public IList<(MailAddress fromEmail, MailAddress toEmail)> PreMatches { get; set; }
+        public IList<PreMatch> PreMatches { get; set; }
 
         [JsonPropertyName("badMatchGroups")]
-        public IList<IList<MailAddress>> BadMatchGroups { get; set; }
+        public IList<IList<string>> BadMatchGroups { get; set; }
 
         public void Validate()
         {
@@ -38,12 +38,23 @@ namespace christmas_bot.Models
             {
                 errors.AppendLine("Participants undefined");
             }
-            else if (this.Participants.Any(p => string.IsNullOrEmpty(p.Name) || p.Email == null || p.ImageUrl == null))
+            else if (this.Participants.Any(p => string.IsNullOrEmpty(p.Name) || string.IsNullOrEmpty(p.Email) || p.ImageUrl == null))
             {
                 errors.AppendLine("All participants must have a name, email, and imageUrl defined");
             }
             else
             {
+                foreach (var p in this.Participants)
+                {
+                    try
+                    {
+                        new MailAddress(p.Email);
+                    }
+                    catch
+                    {
+                        errors.AppendLine($"'{p.Email}' is not a valid email address");
+                    }
+                }
                 if (this.Participants.Count != this.Participants.Select(p => p.Email).Distinct().Count())
                 {
                     errors.AppendLine("All participants must have a unique email");
@@ -58,18 +69,18 @@ namespace christmas_bot.Models
 
             if (this.PreMatches != null && this.PreMatches.Any())
             {
-                if (this.PreMatches.Any(pm => pm.fromEmail == null || pm.toEmail == null))
+                if (this.PreMatches.Any(pm => string.IsNullOrEmpty(pm.From) || string.IsNullOrEmpty(pm.To)))
                 {
                     errors.AppendLine("All prematches must have a from: and to:");
                 }
                 else
                 {
-                    if (this.PreMatches.Count != this.PreMatches.Select(p => p.fromEmail).Distinct().Count()
-                        || this.PreMatches.Count != this.PreMatches.Select(p => p.toEmail).Distinct().Count())
+                    if (this.PreMatches.Count != this.PreMatches.Select(p => p.From).Distinct().Count()
+                        || this.PreMatches.Count != this.PreMatches.Select(p => p.To).Distinct().Count())
                     {
                         errors.AppendLine("Invalid prematch rules - make sure people are only defined once");
                     }
-                    if (this.PreMatches.SelectMany(pm => new[] { pm.fromEmail, pm.toEmail }).Any(e => !participantEmails.Contains(e)))
+                    if (this.PreMatches.SelectMany(pm => new[] { pm.From, pm.To }).Any(e => !participantEmails.Contains(e)))
                     {
                         errors.AppendLine("All prematch emails must appear in the participants list");
                     }
