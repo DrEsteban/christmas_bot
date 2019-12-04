@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.Json;
+using System.Net;
+using System.Net.Mail;
 using christmas_bot.Models;
+using FluentEmail.Core;
+using FluentEmail.Smtp;
 
 namespace christmas_bot
 {
@@ -21,6 +24,19 @@ namespace christmas_bot
                 return;
             }
 
+            string smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST")?.Trim();
+            string smtpUser = Environment.GetEnvironmentVariable("SMTP_USER")?.Trim();
+            string smtpPass = Environment.GetEnvironmentVariable("SMTP_PASS")?.Trim();
+            string wishListLink = Environment.GetEnvironmentVariable("WISHLIST_LINK")?.Trim();
+            if (string.IsNullOrEmpty(smtpHost)
+                || string.IsNullOrEmpty(smtpUser)
+                || string.IsNullOrEmpty(smtpPass)
+                || string.IsNullOrEmpty(wishListLink))
+            {
+                Console.Error.WriteLine("Please specify the following environment variables: SMTP_HOST, SMTP_USER, SMTP_PASS, WISHLIST_LINK");
+                return;
+            }
+
             try
             {
                 _settings = Settings.Load(args[0]);
@@ -32,14 +48,41 @@ namespace christmas_bot
                 foreach (var from in _participants.Except(alreadyGiving))
                 {
                     var candidates = GetCandidatesForParticipant(from);
+                    if (!candidates.Any())
+                    {
+                        throw new Exception("Bad run, try again");
+                    }
                     var to = candidates[r.Next(0, candidates.Count)];  // Choose a receiver at random
                     _matches.Add(new Match(from, to));
                 }
 
                 Debug.Assert(_matches.Count == _participants.Count);
 
-                // TODO Send mail results
-                Console.WriteLine(JsonSerializer.Serialize(_matches, new JsonSerializerOptions() { WriteIndented = true }));
+                // Send mail
+                var smtpClient = new SmtpClient(smtpHost)
+                {
+                    Credentials = new NetworkCredential(smtpUser, smtpPass),
+                    EnableSsl = true
+                };
+                Email.DefaultSender = new SmtpSender(smtpClient);
+                foreach (var match in _matches)
+                {
+                    Console.WriteLine($"Sending email to {match.From.Email}...");
+                    var email = Email.From(smtpUser)
+                                     .To(match.From.Email)
+                                     .Subject($"Hey {match.From.Name}! Your secret santa has been chosen.")
+                                     .Body($"Your secret santa recipient this year is <b>{match.To.Name}</b>!<br><br><img src=\"{match.To.ImageUrl}\" alt=\"{match.To.Name}\"/><br><br>To see their wishlist and to fill out your own, go here!: <a href=\"{wishListLink}\" _target=\"blank\">{wishListLink}</a>", isHtml: true)
+                                     .Send();
+
+                    if (email.Successful)
+                    {
+                        Console.WriteLine($"Sent email to {match.From.Email}.");
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine($"Failed to send to {match.From.Email}. Errors: {string.Join(", ", email.ErrorMessages)}");
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -68,6 +111,9 @@ namespace christmas_bot
             return result;
         }
 
+        /// <summary>
+        /// Gets valid gift candidates for this participant
+        /// </summary>
         private static IList<Participant> GetCandidatesForParticipant(Participant from)
         {
             var candidates = new List<Participant>(_participants);
