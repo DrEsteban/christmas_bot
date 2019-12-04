@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
@@ -42,21 +41,50 @@ namespace christmas_bot
                 _settings = Settings.Load(args[0]);
                 _participants = _settings.Participants;
 
-                var alreadyGiving = AddPreMatches();
-
-                var r = new Random();
-                foreach (var from in _participants.Except(alreadyGiving))
+                // Main selection loop
+                while (true)
                 {
-                    var candidates = GetCandidatesForParticipant(from);
-                    if (!candidates.Any())
+                    // Pre-matches
+                    var preSelectedGivers = new List<Participant>();
+                    if (_settings.PreMatches != null)
                     {
-                        throw new Exception("Bad run, try again");
+                        foreach (var match in _settings.PreMatches)
+                        {
+                            var from = _participants.GetParticipantByEmail(match.FromEmail);
+                            var to = _participants.GetParticipantByEmail(match.ToEmail);
+                            _matches.Add(new Match(from, to));
+                            preSelectedGivers.Add(from);
+                        }
                     }
-                    var to = candidates[r.Next(0, candidates.Count)];  // Choose a receiver at random
-                    _matches.Add(new Match(from, to));
+
+                    // Random matches
+                    var r = new Random();
+                    foreach (var from in _participants.Except(preSelectedGivers))
+                    {
+                        var candidates = GetCandidatesForParticipant(from);
+                        if (!candidates.Any())
+                        {
+                            // Bad run, reset and try again
+                            Console.WriteLine("Bad run, trying again...");
+                            _matches.Clear();
+                            continue;
+                        }
+                        var to = candidates[r.Next(0, candidates.Count)];  // Choose a receiver at random
+                        _matches.Add(new Match(from, to));
+                    }
+
+                    // Final check
+                    if (_matches.Count != _participants.Count)
+                    {
+                        Console.Error.WriteLine("Something really weird happened, trying again...");
+                        _matches.Clear();
+                        continue;
+                    }
+                    break;
                 }
 
-                Debug.Assert(_matches.Count == _participants.Count);
+                Console.WriteLine("Matches selected! Sending emails...");
+                Console.WriteLine();
 
                 // Send mail
                 var smtpClient = new SmtpClient(smtpHost)
@@ -83,32 +111,14 @@ namespace christmas_bot
                         Console.Error.WriteLine($"Failed to send to {match.From.Email}. Errors: {string.Join(", ", email.ErrorMessages)}");
                     }
                 }
+
+                Console.WriteLine();
+                Console.WriteLine("Done!");
             }
             catch (Exception e)
             {
                 Console.Error.WriteLine($"{e.GetType().Name}: {e.Message}");
             }
-        }
-
-        /// <summary>
-        /// Adds prematches
-        /// </summary>
-        /// <returns>A list of people given a match</returns>
-        private static IList<Participant> AddPreMatches()
-        {
-            var result = new List<Participant>();
-            if (_settings.PreMatches != null)
-            {
-                foreach (var match in _settings.PreMatches)
-                {
-                    var from = _participants.GetParticipantByEmail(match.From);
-                    var to = _participants.GetParticipantByEmail(match.To);
-                    _matches.Add(new Match(from, to));
-                    result.Add(from);
-                }
-            }
-
-            return result;
         }
 
         /// <summary>

@@ -5,9 +5,9 @@ namespace christmas_bot.Models
     public class PreMatch
     {
         [JsonPropertyName("from")]
-        public string From { get; set; }
+        public string FromEmail { get; set; }
 
         [JsonPropertyName("to")]
-        public string To { get; set; }
+        public string ToEmail { get; set; }
     }
 }

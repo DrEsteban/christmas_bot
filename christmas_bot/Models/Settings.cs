@@ -11,9 +11,12 @@ namespace christmas_bot.Models
 {
     public class Settings
     {
-        public Settings()
+        private Settings()
         { }
 
+        /// <summary>
+        /// Loads Settings from a file
+        /// </summary>
         public static Settings Load(string filepath)
         {
             string text = File.ReadAllText(filepath);
@@ -31,6 +34,9 @@ namespace christmas_bot.Models
         [JsonPropertyName("badMatchGroups")]
         public IList<IList<string>> BadMatchGroups { get; set; }
 
+        /// <summary>
+        /// Runs Settings validation, throws on error
+        /// </summary>
         public void Validate()
         {
             var errors = new StringBuilder();
@@ -69,18 +75,18 @@ namespace christmas_bot.Models
 
             if (this.PreMatches != null && this.PreMatches.Any())
             {
-                if (this.PreMatches.Any(pm => string.IsNullOrEmpty(pm.From) || string.IsNullOrEmpty(pm.To)))
+                if (this.PreMatches.Any(pm => string.IsNullOrEmpty(pm.FromEmail) || string.IsNullOrEmpty(pm.ToEmail)))
                 {
                     errors.AppendLine("All prematches must have a from: and to:");
                 }
                 else
                 {
-                    if (this.PreMatches.Count != this.PreMatches.Select(p => p.From).Distinct().Count()
-                        || this.PreMatches.Count != this.PreMatches.Select(p => p.To).Distinct().Count())
+                    if (this.PreMatches.Count != this.PreMatches.Select(p => p.FromEmail).Distinct().Count()
+                        || this.PreMatches.Count != this.PreMatches.Select(p => p.ToEmail).Distinct().Count())
                     {
                         errors.AppendLine("Invalid prematch rules - make sure people are only defined once");
                     }
-                    if (this.PreMatches.SelectMany(pm => new[] { pm.From, pm.To }).Any(e => !participantEmails.Contains(e)))
+                    if (this.PreMatches.SelectMany(pm => new[] { pm.FromEmail, pm.ToEmail }).Any(e => !participantEmails.Contains(e)))
                     {
                         errors.AppendLine("All prematch emails must appear in the participants list");
                     }
