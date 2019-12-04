@@ -96,6 +96,7 @@ namespace christmas_bot
                 foreach (var match in _matches)
                 {
                     Console.WriteLine($"Sending email to {match.From.Email}...");
+
                     var email = Email.From(smtpUser)
                                      .To(match.From.Email)
                                      .Subject($"Hey {match.From.Name}! Your secret santa has been chosen.")
@@ -114,6 +115,7 @@ namespace christmas_bot
 
                 Console.WriteLine();
                 Console.WriteLine("Done!");
+                
             }
             catch (Exception e)
             {
@@ -130,7 +132,8 @@ namespace christmas_bot
             candidates.Remove(from);
 
             var alreadyReceiving = _matches.Select(m => m.To).ToArray();
-            foreach (var p in _participants.Where(p => alreadyReceiving.Contains(p)))
+            var gifter = _matches.Where(f => f.To == from).Select(t => t.From).FirstOrDefault();
+            foreach (var p in _participants.Where(p => alreadyReceiving.Contains(p) || p == gifter))
             {
                 candidates.Remove(p);
             }
