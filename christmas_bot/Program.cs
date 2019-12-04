@@ -59,21 +59,28 @@ namespace christmas_bot
 
                     // Random matches
                     var r = new Random();
+                    bool reset = false;
                     foreach (var from in _participants.Except(preSelectedGivers))
                     {
                         var candidates = GetCandidatesForParticipant(from);
                         if (!candidates.Any())
                         {
                             // Bad run, reset and try again
-                            Console.WriteLine("Bad run, trying again...");
-                            _matches.Clear();
-                            continue;
+                            reset = true;
+                            break;
                         }
                         var to = candidates[r.Next(0, candidates.Count)];  // Choose a receiver at random
                         _matches.Add(new Match(from, to));
                     }
 
-                    // Final check
+                    if (reset)
+                    {
+                        Console.WriteLine("Bad run, trying again...");
+                        _matches.Clear();
+                        continue;
+                    }
+
+                    // Sanity check
                     if (_matches.Count != _participants.Count)
                     {
                         Console.Error.WriteLine("Something really weird happened, trying again...");
